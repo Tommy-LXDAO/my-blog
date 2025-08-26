@@ -14,7 +14,7 @@ export default function ArticleCard({ title, excerpt, onClick }: Props) {
     >
       {/* 第一层：标题 */}
       <h2
-        className="text-2xl md:text-3xl font-semibold underline underline-offset-4 cursor-pointer"
+        className="text-2xl md:text-3xl font-semibold underline underline-offset-4 cursor-pointer text-blue-500"
         onClick={onClick}
         title={title}
       >
