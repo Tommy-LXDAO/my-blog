@@ -7,7 +7,7 @@ export default function Home() {
   return (
     <div>
       <div className="h-40 flex justify-center items-center">
-        <span className="text-5xl md:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 drop-shadow-lg tracking-wide">程序员小屋</span>
+        <span className="text-5xl md:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 drop-shadow-lg tracking-wide">零界点</span>
       </div>
       {/* <div className="h-40 flex justify-center items-center">
         <img src="/Image.png" className="h-40" alt="Image" />

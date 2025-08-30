@@ -3,6 +3,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "./_components/header";
+import { ThemeProvider } from "./_components/theme-provider"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,13 +21,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen text-white dark:text-black`}
+        className={``}
       >
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
         {/* header+导航栏 也是黑色，需要下边框，固定在页面最上方，并且子元素具有 图标、导航栏、联系方式等等 */}
         <Header/>
         {children}
+        </ThemeProvider>
       </body>
     </html>
   );
