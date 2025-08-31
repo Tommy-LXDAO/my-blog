@@ -1,7 +1,17 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in-700 {
+  animation: fadeIn 0.7s ease-out both;
+}
+
 
 @theme inline {
   --color-background: var(--background);

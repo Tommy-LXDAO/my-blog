@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import ArticleCard from "./content";
 
 export default function ContentList() {
   const [articles, setArticles] = useState<
     { id: number; title: string; excerpt: string }[]
   >([]);
+  const router = useRouter()
 
   useEffect(() => {
     async function fetchArticles() {
@@ -31,7 +33,7 @@ export default function ContentList() {
             key={article.id}
             title={article.title}
             excerpt={article.excerpt}
-            onClick={() => console.log("go to detail", article.id)}
+            onClick={() => router.push(`/article/${article.id}`)}
           />
         ))}
       </div>
