@@ -13,7 +13,7 @@ export default function Header() {
             <div className="h-5">
                 <Image src='/Icon_laptop_code.png' height={10} width={24} alt="Icon"/>
             </div>
-            <div className=""><span className="">零界点</span></div>
+            <div className=""><span className="">极客园地</span></div>
         </div>
         <nav className="flex w-1/3 items-center justify-evenly">
           <ModeToggle />
