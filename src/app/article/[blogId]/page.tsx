@@ -1,4 +1,4 @@
-'use client';
+// 'use client';
 
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -48,6 +48,7 @@ export default function BlogPage({ params }: { params: Promise<{ blogId: string 
   );
 }
 
+// github page config
 export async function generateStaticParams() {
   return [
     { blogId: "1" },
