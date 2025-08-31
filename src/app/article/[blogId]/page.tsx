@@ -47,3 +47,11 @@ export default function BlogPage({ params }: { params: Promise<{ blogId: string 
     </div>
   );
 }
+
+export async function generateStaticParams() {
+  return [
+    { blogId: "1" },
+    { blogId: "2" },
+    { blogId: "3" },
+  ]
+}
