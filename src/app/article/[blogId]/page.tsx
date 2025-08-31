@@ -1,16 +1,8 @@
-// 'use client';
+'use client';
 
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import React, { useEffect, useState } from 'react';
-import { div } from 'framer-motion/client';
-
-const demoDatas = `# Title 1
-## Title 2
-hello *world*
-- test
-- test2 nihao
-`
 
 // 详情页，通过接口获取文章的markdown raw data，并转换为样式
 export default function BlogPage({ params }: { params: Promise<{ blogId: string }> }) {
@@ -46,13 +38,4 @@ export default function BlogPage({ params }: { params: Promise<{ blogId: string 
       </div>
     </div>
   );
-}
-
-// github page config
-export async function generateStaticParams() {
-  return [
-    { blogId: "1" },
-    { blogId: "2" },
-    { blogId: "3" },
-  ]
 }
