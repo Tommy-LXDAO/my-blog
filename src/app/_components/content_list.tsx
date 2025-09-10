@@ -3,17 +3,21 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ArticleCard from "./content";
+import { useApi } from "../../hooks/useApi"
 
 export default function ContentList() {
   const [articles, setArticles] = useState<
-    { id: number; title: string; excerpt: string }[]
+    { id: number; title: string; introduction: string }[]
   >([]);
   const router = useRouter()
+
+  const { fetchApi } = useApi();
 
   useEffect(() => {
     async function fetchArticles() {
       try {
-        const res = await fetch("/mock/articles.json"); // 从 public 目录读取
+        // const res = await fetchApi("/mock/articles.json"); // 从 public 目录读取
+        const res = await fetchApi("/articles/list"); // 从 public 目录读取
         if (!res.ok) throw new Error("加载失败");
         const data = await res.json();
         setArticles(data);
@@ -32,7 +36,7 @@ export default function ContentList() {
           <ArticleCard
             key={article.id}
             title={article.title}
-            excerpt={article.excerpt}
+            excerpt={article.introduction}
             onClick={() => router.push(`/article/${article.id}`)}
           />
         ))}
