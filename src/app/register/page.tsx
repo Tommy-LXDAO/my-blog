@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useApi } from '@/hooks/useApi';
+import { JSEncrypt } from 'jsencrypt';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -15,6 +16,24 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [publicKey, setPublicKey] = useState('');
+
+  // 页面加载时获取RSA公钥
+  useEffect(() => {
+    const fetchPublicKey = async () => {
+      try {
+        const response = await fetchApi('/auth/rsa_public_key');
+        // 直接获取响应文本，因为返回的是公钥字符串而不是JSON
+        const publicKeyText = await response.text();
+        setPublicKey(publicKeyText);
+      } catch (err) {
+        console.error('Failed to fetch public key:', err);
+        setError('获取加密密钥失败');
+      }
+    };
+
+    fetchPublicKey();
+  }, [fetchApi]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,13 +48,29 @@ export default function RegisterPage() {
     setError('');
     
     try {
+      // 使用RSA公钥加密密码
+      let encryptedPassword = password;
+      if (publicKey) {
+        const encrypt = new JSEncrypt();
+        encrypt.setPublicKey(publicKey);
+        const result = encrypt.encrypt(password);
+        if (result === false) {
+          // 直接中断注册，增加提示
+          setError('密码加密失败，请稍后重试');
+          setIsLoading(false);
+          return;
+        }
+        encryptedPassword = result;
+      }
+      
       // 调用注册API
       const response = await fetchApi('/auth/register', {
         method: 'POST',
         body: JSON.stringify({
-          name: name,
-          username: email,
-          password: password
+          userName: name,
+          email: email,
+          password: encryptedPassword,
+          avatarFileId: "1"  // 使用默认头像ID
         })
       });
       
@@ -44,8 +79,8 @@ export default function RegisterPage() {
       
       // 检查注册结果
       if (data.result === false) {
-        // 处理注册失败，显示failureMsg
-        setError(data.failureMsg || '注册失败，请重试');
+        // 处理注册失败，显示msg
+        setError(data.msg || '注册失败，请重试');
         return;
       }
       
@@ -54,7 +89,6 @@ export default function RegisterPage() {
       
       // 注册成功后重定向到登录页面
       router.push('/login');
-      router.refresh();
     } catch (err) {
       console.error('Register failed:', err);
       setError('网络错误，请稍后重试');
@@ -85,7 +119,7 @@ export default function RegisterPage() {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-foreground">
-                姓名
+                用户名称
               </label>
               <div className="mt-1">
                 <input
