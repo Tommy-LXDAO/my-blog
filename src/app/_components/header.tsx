@@ -4,6 +4,7 @@ import Image from "next/image";
 
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "./mode_toggle";
+import UserInfo from "./user_info";
 
 export default function Header() {
     const router = useRouter();
@@ -22,8 +23,7 @@ export default function Header() {
           <div><button className='hover:cursor-pointer' onClick={() => {router.push(`/article`)}}>博客</button></div>
           <div><button className='hover:cursor-pointer' onClick={() => {router.push(`/community`)}}>社区</button></div>
           <div><button className='hover:cursor-pointer' onClick={() => {router.push(`/`)}}>好朋友们</button></div>
-          <div><Button variant='ghost' className="bg-blue-300 hover:cursor-pointer">登录</Button></div>
-          <div><Button variant='ghost' className="bg-orange-300 hover:cursor-pointer">注册</Button></div>
+          <div><UserInfo /></div>
         </nav>
       </header>
     )

@@ -4,16 +4,21 @@ import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import React, { useEffect, useState } from 'react';
 
+import { useApi } from '@/hooks/useApi';
+
 // 详情页，通过接口获取文章的markdown raw data，并转换为样式
 export default function BlogPage({ params }: { params: Promise<{ blogId: string }> }) {
 
   const [datas, setDatas] = useState<{item_id: string, raw_data: string}>();
 
+  const { fetchApi } = useApi();
+
   const { blogId } = React.use(params);  // 解 Promise
   useEffect(() => {
     async function fetchBlogRawDatas() {
       try {
-        const res = await fetch(`/mock/article_${blogId}.json`); // 从 public 目录读取
+        // const res = await fetchApi(`/mock/article_${blogId}.json`); // 从 public 目录读取
+        const res = await fetchApi(`/articles/detail/${blogId}`); // 从 public 目录读取
         if (!res.ok) throw new Error("获取文章数据失败");
         const data = await res.json();
         setDatas(data);

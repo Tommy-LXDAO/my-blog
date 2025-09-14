@@ -7,12 +7,12 @@ import { ThemeProvider } from "./_components/theme-provider"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
+ subsets: ["latin"],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+ subsets: ["latin"],
 });
 
 export default function RootLayout({

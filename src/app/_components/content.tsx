@@ -10,7 +10,7 @@ type Props = {
 export default function ArticleCard({ title, excerpt, onClick }: Props) {
   return (
     <article
-      className="rounded-2xl border border-gray-200 p-4 hover:shadow-sm transition-shadow animate-fadeIn"
+      className="rounded-2xl border border-gray-200 p-4 hover:shadow-sm transition-shadow animate-fadeIn text-center"
     >
       {/* 第一层：标题 */}
       <h2

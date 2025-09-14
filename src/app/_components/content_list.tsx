@@ -31,7 +31,7 @@ export default function ContentList() {
 
   return (
     <div className="flex justify-center">
-      <div className="max-w-800 pl-20 pr-20 space-y-6">
+      <div className="w-800 pl-20 pr-20 space-y-6">
         {articles.map((article) => (
           <ArticleCard
             key={article.id}
