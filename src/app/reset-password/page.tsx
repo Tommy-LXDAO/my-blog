@@ -1,20 +1,37 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useApi } from '@/hooks/useApi';
 import { JSEncrypt } from 'jsencrypt';
 
-export default function LoginPage() {
+export default function ResetPasswordPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { fetchApi } = useApi();
-  const emailRef = useRef<HTMLInputElement>(null);
-  const passwordRef = useRef<HTMLInputElement>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [publicKey, setPublicKey] = useState('');
+  const [userId, setUserId] = useState('');
+  const [authToken, setAuthToken] = useState('');
+
+  // 获取URL参数
+  useEffect(() => {
+    const userIdParam = searchParams.get('userId');
+    const authTokenParam = searchParams.get('auth_token');
+    
+    if (userIdParam && authTokenParam) {
+      setUserId(userIdParam);
+      setAuthToken(authTokenParam);
+    } else {
+      setError('缺少必要的参数');
+    }
+  }, [searchParams]);
 
   // 页面加载时获取RSA公钥
   useEffect(() => {
@@ -35,22 +52,31 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // 基本验证
+    if (newPassword !== confirmPassword) {
+      setError('密码不匹配');
+      return;
+    }
+    
+    if (!userId || !authToken) {
+      setError('缺少必要的参数');
+      return;
+    }
+    
     setIsLoading(true);
+    setMessage('');
     setError('');
     
-    // 获取email和password的值
-    const email = emailRef.current?.value || '';
-    const password = passwordRef.current?.value || '';
-    
     try {
-      // 使用RSA公钥加密密码
-      let encryptedPassword = password;
+      // 使用RSA公钥加密新密码
+      let encryptedPassword = newPassword;
       if (publicKey) {
         const encrypt = new JSEncrypt();
         encrypt.setPublicKey(publicKey);
-        const result = encrypt.encrypt(password);
+        const result = encrypt.encrypt(newPassword);
         if (result === false) {
-          // 直接中断登录，增加提示
+          // 直接中断操作，增加提示
           setError('密码加密失败，请稍后重试');
           setIsLoading(false);
           return;
@@ -58,40 +84,43 @@ export default function LoginPage() {
         encryptedPassword = result;
       }
       
-      // 调用登录API
-      const response = await fetchApi('/auth/login', {
+      // 调用重置密码API
+      const response = await fetchApi(`/auth/changePassword?userId=${userId}&auth_token=${authToken}`, {
         method: 'POST',
         body: JSON.stringify({
-          username: email,
-          password: encryptedPassword
+          newPassword: encryptedPassword
         })
       });
       
       // 解析响应数据
       const data = await response.json();
       
-      // 检查登录结果
-      if (data.result === false) {
-        // 处理登录失败，显示failureMsg
-        setError(data.failureMsg || '登录失败，请检查您的凭据');
-        return;
+      // 检查结果
+      if (data.success === true) {
+        // 显示成功信息并跳转到登录页面
+        setMessage('密码修改成功');
+        setTimeout(() => {
+          router.push('/login');
+        }, 200);
+      } else {
+        // 显示错误信息
+        setError(data.message || '密码重置失败');
       }
-      
-      // 登录成功后的逻辑
-      console.log('Login successful:', data);
-      
-      // 保存token到localStorage
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-      }
-      
-      // 登录成功后重定向到首页
-      router.push('/');
-      // 触发自定义事件通知user_info组件重新检查token
-      window.dispatchEvent(new CustomEvent('tokenChanged'));
     } catch (err) {
-      console.error('Login failed:', err);
-      setError('网络错误，请稍后重试');
+      console.error('Request failed:', err);
+      // 检查是否是401错误
+      // 由于我们使用的是自定义的fetchApi，错误对象可能没有response属性
+      // 我们需要检查错误信息来判断是否是401错误
+      if (err instanceof Error) {
+        // 如果错误信息包含401或Token无效相关的内容
+        if (err.message.includes('401') || err.message.includes('Token')) {
+          setError('Token无效');
+        } else {
+          setError('网络错误，请稍后重试');
+        }
+      } else {
+        setError('网络错误，请稍后重试');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -102,10 +131,10 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-foreground">
-            登录到您的账户
+            重置密码
           </h2>
           <p className="mt-2 text-center text-sm text-muted-foreground">
-            请输入您的凭据以访问您的账户
+            请输入您的新密码
           </p>
         </div>
         
@@ -116,43 +145,44 @@ export default function LoginPage() {
             </div>
           )}
           
+          {message && (
+            <div className="mb-4 p-3 bg-green-100 text-green-800 text-sm rounded-md">
+              {message}
+            </div>
+          )}
+          
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-foreground">
-                邮箱地址
+              <label htmlFor="newPassword" className="block text-sm font-medium text-foreground">
+                新密码
               </label>
               <div className="mt-1">
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
+                  id="newPassword"
+                  name="newPassword"
+                  type="password"
+                  autoComplete="new-password"
                   required
-                  ref={emailRef}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
                   className="w-full px-3 py-2 border border-input rounded-md shadow-sm placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
                 />
               </div>
             </div>
 
             <div>
-              <div className="flex items-center justify-between">
-                <label htmlFor="password" className="block text-sm font-medium text-foreground">
-                  密码
-                </label>
-                <div className="text-sm">
-                  <Link href="/forgot-password" className="font-medium text-primary hover:text-primary/80">
-                    忘记密码?
-                  </Link>
-                </div>
-              </div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground">
+                确认新密码
+              </label>
               <div className="mt-1">
                 <input
-                  id="password"
-                  name="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
                   type="password"
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                   required
-                  ref={passwordRef}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   className="w-full px-3 py-2 border border-input rounded-md shadow-sm placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring bg-background text-foreground"
                 />
               </div>
@@ -162,12 +192,12 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={isLoading || !publicKey}
+                disabled={isLoading}
               >
                 {isLoading ? (
-                  <span>登录中...</span>
+                  <span>重置中...</span>
                 ) : (
-                  <span>登录</span>
+                  <span>重置密码</span>
                 )}
               </Button>
             </div>
@@ -185,25 +215,11 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* <div className="mt-6 grid grid-cols-2 gap-3">
-              <div>
-                <Button variant="outline" className="w-full">
-                  <span>GitHub</span>
-                </Button>
-              </div>
-              <div>
-                <Button variant="outline" className="w-full">
-                  <span>Google</span>
-                </Button>
-              </div>
-            </div> */}
-          </div>
-          
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            还没有账户?{' '}
-            <Link href="/register" className="font-medium text-primary hover:text-primary/80">
-              注册
-            </Link>
+            <div className="mt-6 text-center text-sm text-muted-foreground">
+              <Link href="/login" className="font-medium text-primary hover:text-primary/80">
+                返回登录
+              </Link>
+            </div>
           </div>
         </div>
       </div>
