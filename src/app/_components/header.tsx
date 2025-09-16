@@ -21,6 +21,7 @@ export default function Header() {
           <div><button className='hover:cursor-pointer' onClick={() => {router.push(`/`)}}>首页</button></div>
           <div><button className='hover:cursor-pointer' onClick={() => {router.push(`/classification`)}}>分类</button></div>
           <div><button className='hover:cursor-pointer' onClick={() => {router.push(`/article`)}}>博客</button></div>
+          <div><button className='hover:cursor-pointer' onClick={() => {router.push(`/create-article`)}}>创建文章</button></div>
           <div><button className='hover:cursor-pointer' onClick={() => {router.push(`/community`)}}>社区</button></div>
           <div><button className='hover:cursor-pointer' onClick={() => {router.push(`/`)}}>好朋友们</button></div>
           <div><UserInfo /></div>
