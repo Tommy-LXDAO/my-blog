@@ -73,10 +73,68 @@ export default function CreateArticlePage() {
     setContent(value || '');
  };
 
- const handleSave = () => {
-    console.log('保存文章:', { title: titleRef.current, content: contentRef.current });
-    alert('文章已保存！');
-  };
+ const handleSave = async () => {
+    // 获取token
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('请先登录');
+      router.push('/login');
+      return;
+    }
+
+    // 检查标题是否为空
+    if (!titleRef.current.trim()) {
+      alert('请输入文章标题');
+      return;
+    }
+
+    try {
+      // 显示保存中提示
+      const saveBtn = document.querySelector('button[onclick*="handleSave"]');
+      if (saveBtn) {
+        const originalText = saveBtn.textContent;
+        saveBtn.textContent = '保存中...';
+        saveBtn.setAttribute('disabled', 'true');
+      }
+
+      // 调用API保存文章
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/articles/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: titleRef.current,
+          rawData: contentRef.current, // rawData表示文章原生markdown内容
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`保存失败: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        alert('文章保存成功！');
+        // 保存成功后可以重定向到文章列表或其他页面
+        router.push('/'); // 或者可以重定向到新创建的文章页面
+      } else {
+        throw new Error(result.msg || '保存失败');
+      }
+    } catch (error) {
+      console.error('保存文章失败:', error);
+      alert(`保存失败: ${(error as Error).message}`);
+    } finally {
+      // 恢复按钮状态
+      const saveBtn = document.querySelector('button[onclick*="handleSave"]');
+      if (saveBtn) {
+        saveBtn.textContent = '保存文章';
+        saveBtn.removeAttribute('disabled');
+      }
+    }
+ };
 
   const handleClear = () => {
     titleRef.current = '';
