@@ -1,34 +1,61 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import MDEditor from '@uiw/react-md-editor';
+import { getApiBaseUrl } from '@/lib/config';
 
-// 模拟图片上传函数
-// 在实际应用中，您需要将此函数替换为真实的上传逻辑
+// 图片上传函数
 const uploadImage = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    // 这里应该实现真实的上传逻辑，例如：
-    // 1. 将文件上传到服务器
-    // 2. 上传到云存储服务（如 AWS S3、阿里云 OSS 等）
-    // 3. 获取图片的公共访问 URL
-    
-    // 当前实现只是模拟上传过程
-    setTimeout(() => {
-      // 模拟上传成功，返回图片 URL
-      // 在实际应用中，这里应该是服务器返回的图片 URL
-      const imageUrl = URL.createObjectURL(file);
-      resolve(imageUrl);
+  return new Promise(async (resolve, reject) => {
+    // 创建FormData对象
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('isPrivate', 'false'); // 默认为false
+
+    try {
+      // 获取token
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('用户未登录');
+      }
+
+      // 使用配置文件中的API基础URL
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/files/upload`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          // 注意：不要设置Content-Type，让浏览器自动设置multipart/form-data的边界
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`上传失败: ${response.status} ${response.statusText}`);
+      }
+
+      // 解析响应
+      const result = await response.json();
       
-      // 如果需要模拟上传失败，可以使用以下代码：
-      // reject(new Error('上传失败'));
-    }, 100);
-  });
+      if (!result.success) {
+        throw new Error(`上传失败: ${result.msg}`)
+      }
+
+      resolve(`${baseUrl}/files/getFile/${result.fileId}`)
+    } catch (error) {
+      console.error('图片上传失败:', error);
+      reject(error);
+    }
+ });
 };
 
 export default function CreateArticlePage() {
+  const router = useRouter();
   const { theme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const titleRef = useRef('');
   const contentRef = useRef("## 所见即所得（WYSIWYG）\n所见即所得模式对不熟悉 Markdown 的用户较为友好，熟悉 Markdown 的话也可以无缝使用。\n\n### 代码示例\n```javascript\nconsole.log('Hello, world!');\n```\n\n### 列示例\n- 项目 1\n- 项目 2\n- 项目 3\n\n> 这是一个引用块\n\n[链接示例](https://example.com)");
   
@@ -58,10 +85,42 @@ export default function CreateArticlePage() {
     setContent('');
   };
 
+  // 检查用户是否已登录
+  useEffect(() => {
+    const checkAuth = () => {
+      // 直接检查localStorage中是否存在token
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      
+      if (!token) {
+        // 如果没有token，重定向到登录页面
+        router.push('/login');
+        console.log(`token is false`);
+        return;
+      }
+      
+      // 如果有token，继续加载页面
+      setCheckingAuth(false);
+    };
+
+    checkAuth();
+ }, [router]);
+
   // 确保只在客户端设置 mounted，避免水合不匹配
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // 如果正在检查认证状态，显示加载状态
+  if (checkingAuth) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+          <p className="mt-2">检查登录状态...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-screen flex flex-col">
@@ -84,7 +143,7 @@ export default function CreateArticlePage() {
         </div>
 
         {/* MDEditor 编辑器 - 扩展以填充剩余空间 */}
-        <div className="flex-grow border border-gray-30 rounded-md dark:border-gray-600 overflow-hidden h-[calc(100vh-200px)]">
+        <div className="flex-grow border border-gray-3 rounded-md dark:border-gray-600 overflow-hidden h-[calc(100vh-200px)]">
           {mounted ? (
             <MDEditor
               value={content}
@@ -179,7 +238,7 @@ export default function CreateArticlePage() {
             保存文章
           </button>
           <button
-            className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+            className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-50 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
             onClick={handleClear}
           >
             清空
