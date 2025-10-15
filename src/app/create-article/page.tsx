@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import MDEditor from '@uiw/react-md-editor';
 import { getApiBaseUrl } from '@/lib/config';
@@ -53,14 +53,20 @@ const uploadImage = (file: File): Promise<string> => {
 
 export default function CreateArticlePage() {
   const router = useRouter();
+ const searchParams = useSearchParams();
   const { theme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [loadingArticle, setLoadingArticle] = useState(false);
   const titleRef = useRef('');
   const contentRef = useRef("## 所见即所得（WYSIWYG）\n所见即所得模式对不熟悉 Markdown 的用户较为友好，熟悉 Markdown 的话也可以无缝使用。\n\n### 代码示例\n```javascript\nconsole.log('Hello, world!');\n```\n\n### 列示例\n- 项目 1\n- 项目 2\n- 项目 3\n\n> 这是一个引用块\n\n[链接示例](https://example.com)");
   
   const [title, setTitle] = useState(titleRef.current);
   const [content, setContent] = useState(contentRef.current);
+
+  // 检查是否为编辑模式
+ const articleId = searchParams.get('id');
+  const isEditMode = searchParams.get('edit') === 'true';
 
   // 更新 ref 的值但不触发重新渲染
   const updateTitleRef = (value: string) => {
@@ -72,6 +78,50 @@ export default function CreateArticlePage() {
     contentRef.current = value || '';
     setContent(value || '');
  };
+
+ // 加载文章数据（编辑模式）
+ useEffect(() => {
+    if (isEditMode && articleId) {
+      const fetchArticle = async () => {
+        setLoadingArticle(true);
+        try {
+          const token = localStorage.getItem('token');
+          if (!token) {
+            alert('请先登录');
+            router.push('/login');
+            return;
+          }
+
+          const baseUrl = getApiBaseUrl();
+          const response = await fetch(`${baseUrl}/articles/detail/${articleId}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`加载文章失败: ${response.status} ${response.statusText}`);
+          }
+
+          const article = await response.json();
+          
+          // 更新标题和内容
+          updateTitleRef(article.title || '');
+          updateContentRef(article.rawData || '');
+        } catch (error) {
+          console.error('加载文章失败:', error);
+          alert(`加载文章失败: ${(error as Error).message}`);
+          // 加载失败时返回首页
+          router.push('/');
+        } finally {
+          setLoadingArticle(false);
+        }
+      };
+
+      fetchArticle();
+    }
+  }, [isEditMode, articleId, router]);
 
  const handleSave = async () => {
     // 获取token
@@ -93,50 +143,62 @@ export default function CreateArticlePage() {
       const saveBtn = document.querySelector('button[onclick*="handleSave"]');
       if (saveBtn) {
         const originalText = saveBtn.textContent;
-        saveBtn.textContent = '保存中...';
+        saveBtn.textContent = isEditMode ? '更新中...' : '保存中...';
         saveBtn.setAttribute('disabled', 'true');
       }
 
-      // 调用API保存文章
+      // 根据是否为编辑模式选择API端点
       const baseUrl = getApiBaseUrl();
-      const response = await fetch(`${baseUrl}/articles/create`, {
+      const endpoint = isEditMode 
+        ? `${baseUrl}/articles/update`  // 编辑模式使用更新API
+        : `${baseUrl}/articles/create`; // 创建模式使用创建API
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
+          id: isEditMode ? articleId : undefined, // 编辑时传递文章ID
           title: titleRef.current,
           rawData: contentRef.current, // rawData表示文章原生markdown内容
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`保存失败: ${response.status} ${response.statusText}`);
+        throw new Error(`${isEditMode ? '更新' : '保存'}失败: ${response.status} ${response.statusText}`);
       }
 
       const result = await response.json();
       if (result.success) {
-        alert('文章保存成功！');
-        // 保存成功后可以重定向到文章列表或其他页面
-        router.push('/'); // 或者可以重定向到新创建的文章页面
+        alert(isEditMode ? '文章更新成功！' : '文章保存成功！');
+        // 保存成功后重定向到文章详情页
+        router.push(`/article/${result.id || articleId}`); 
       } else {
-        throw new Error(result.msg || '保存失败');
+        throw new Error(result.msg || `${isEditMode ? '更新' : '保存'}失败`);
       }
     } catch (error) {
-      console.error('保存文章失败:', error);
-      alert(`保存失败: ${(error as Error).message}`);
+      console.error(`${isEditMode ? '更新' : '保存'}文章失败:`, error);
+      alert(`操作失败: ${(error as Error).message}`);
     } finally {
       // 恢复按钮状态
       const saveBtn = document.querySelector('button[onclick*="handleSave"]');
       if (saveBtn) {
-        saveBtn.textContent = '保存文章';
+        saveBtn.textContent = isEditMode ? '更新文章' : '保存文章';
         saveBtn.removeAttribute('disabled');
       }
     }
  };
 
   const handleClear = () => {
+    if (isEditMode) {
+      // 编辑模式下不建议清空，提示用户
+      if (!confirm('确定要清空当前编辑的内容吗？这将丢失所有未保存的更改。')) {
+        return;
+      }
+    }
+    
     titleRef.current = '';
     contentRef.current = '';
     setTitle('');
@@ -144,7 +206,7 @@ export default function CreateArticlePage() {
   };
 
   // 检查用户是否已登录
-  useEffect(() => {
+ useEffect(() => {
     const checkAuth = () => {
       // 直接检查localStorage中是否存在token
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -168,13 +230,13 @@ export default function CreateArticlePage() {
     setMounted(true);
   }, []);
 
-  // 如果正在检查认证状态，显示加载状态
-  if (checkingAuth) {
+  // 如果正在检查认证状态或加载文章，显示加载状态
+  if (checkingAuth || (isEditMode && loadingArticle)) {
     return (
       <div className="w-full h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-          <p className="mt-2">检查登录状态...</p>
+          <p className="mt-2">{isEditMode && loadingArticle ? '加载文章中...' : '检查登录状态...'}</p>
         </div>
       </div>
     );
@@ -183,7 +245,7 @@ export default function CreateArticlePage() {
   return (
     <div className="w-full h-screen flex flex-col">
       <div className="flex-grow p-4">
-        <h1 className="text-3xl font-bold mb-4">创建新文章</h1>
+        <h1 className="text-3xl font-bold mb-4">{isEditMode ? '编辑文章' : '创建新文章'}</h1>
         
         {/* 标题输入 */}
         <div className="mb-4">
@@ -293,10 +355,10 @@ export default function CreateArticlePage() {
             className="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             onClick={handleSave}
           >
-            保存文章
+            {isEditMode ? '更新文章' : '保存文章'}
           </button>
           <button
-            className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-50 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+            className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
             onClick={handleClear}
           >
             清空

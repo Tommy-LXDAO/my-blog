@@ -4,6 +4,12 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApi } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface UserInfo {
   id: string;
@@ -14,7 +20,7 @@ interface UserInfo {
 
 export default function UserInfo() {
   const router = useRouter();
-  const { fetchApi } = useApi();
+ const { fetchApi } = useApi();
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -87,11 +93,27 @@ export default function UserInfo() {
     return <div className="flex items-center">加载中...</div>;
   }
 
-  if (userInfo) {
+ if (userInfo) {
     return (
       <div className="flex items-center space-x-4">
-        <span>欢迎, {userInfo.userName}!</span>
-        <Button variant="ghost" onClick={handleLogout}>退出</Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="flex items-center space-x-1">
+              <span>欢迎, {userInfo.userName}!</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => router.push('/reset-password')}>
+              重置密码
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push('/articles?myArticles=true')}>
+              查看我的文章
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>
+              退出
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     );
   }
